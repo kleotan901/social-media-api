@@ -37,6 +37,22 @@ class UserViewSet(
             return UserListSerializer
         return UserSerializer
 
+    def get_queryset(self):
+        """Retrieve the users with filters"""
+        email = self.request.query_params.get("email")
+        first_name = self.request.query_params.get("first_name")
+        last_name = self.request.query_params.get("last_name")
+        queryset = self.queryset
+
+        if email:
+            queryset = queryset.filter(email__icontains=email)
+        if first_name:
+            queryset = queryset.filter(first_name__icontains=first_name)
+        if last_name:
+            queryset = queryset.filter(last_name__icontains=last_name)
+
+        return queryset
+
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
