@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 
 def user_img_file_path(instance, filename):
     _, extension = os.path.splitext(filename)
-    filename = f"{slugify(instance.title)}-{uuid.uuid4()}.{extension}"
+    filename = f"{slugify(instance.email)}-{uuid.uuid4()}.{extension}"
     return os.path.join("upload/users", filename)
 
 
