@@ -18,6 +18,7 @@ class Post(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts"
     )
     title = models.CharField(max_length=255)
+    hashtag = models.CharField(max_length=100, blank=True, null=True)
     content = models.TextField(max_length=1500)
     created_at = models.DateTimeField(auto_now_add=True)
     liked_by = models.ManyToManyField(settings.AUTH_USER_MODEL)
