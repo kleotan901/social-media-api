@@ -1,6 +1,9 @@
-from rest_framework import generics, mixins, viewsets
+from django.contrib.auth import get_user_model
+from rest_framework import generics, mixins, viewsets, status
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -11,6 +14,10 @@ from user.serializers import UserSerializer, UserListSerializer
 
 class CreateUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
+
+
+class TokenView(ObtainAuthToken):
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
 
 
 class ManageUserView(generics.RetrieveUpdateAPIView):
@@ -55,10 +62,41 @@ class UserViewSet(
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         refresh_token = request.data.get("refresh")
         token = RefreshToken(refresh_token)
         token.blacklist()
         return Response({"detail": "Logout successful"})
+
+
+class UserFollowView(viewsets.ViewSet):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = get_user_model().objects.all()
+
+    def follow(self, request, pk):
+        own_profile = get_user_model().objects.get(pk=request.user.id)
+        follow_profile = get_user_model().objects.get(pk=pk)
+        following = own_profile.following.all()
+
+        if own_profile != follow_profile:
+            if follow_profile not in following:
+                own_profile.following.add(follow_profile.id)
+        return Response({"message": "now you are following"}, status=status.HTTP_200_OK)
+
+    def unfollow(self, request, pk):
+        own_profile = get_user_model().objects.get(pk=request.user.id)
+        follow_profile = get_user_model().objects.get(pk=pk)
+        following = own_profile.following.all()
+
+        if own_profile != follow_profile:
+            if follow_profile in following:
+                own_profile.following.remove(follow_profile.id)
+
+        return Response(
+            {"message": "you are no longer following him/her"},
+            status=status.HTTP_200_OK,
+        )
