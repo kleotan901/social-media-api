@@ -5,19 +5,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('social_app', '0004_post_hashtag'),
+        ("social_app", "0004_post_hashtag"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='post',
-            name='liked_by',
-            field=models.ManyToManyField(related_name='likes', to=settings.AUTH_USER_MODEL),
+            model_name="post",
+            name="liked_by",
+            field=models.ManyToManyField(
+                related_name="likes", to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.DeleteModel(
-            name='Like',
+            name="Like",
         ),
     ]

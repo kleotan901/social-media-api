@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('social_app', '0003_post_image'),
+        ("social_app", "0003_post_image"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='post',
-            name='hashtag',
+            model_name="post",
+            name="hashtag",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
     ]

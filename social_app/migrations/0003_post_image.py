@@ -5,15 +5,16 @@ import social_app.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('social_app', '0002_initial'),
+        ("social_app", "0002_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='post',
-            name='image',
-            field=models.ImageField(null=True, upload_to=social_app.models.post_img_file_path),
+            model_name="post",
+            name="image",
+            field=models.ImageField(
+                null=True, upload_to=social_app.models.post_img_file_path
+            ),
         ),
     ]
