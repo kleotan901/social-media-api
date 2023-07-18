@@ -97,6 +97,6 @@ class UserFollowView(viewsets.ViewSet):
                 own_profile.following.remove(follow_profile.id)
 
         return Response(
-            {"message": "you are no longer following him/her"},
+            {"message": "You are no longer following this user"},
             status=status.HTTP_200_OK,
         )

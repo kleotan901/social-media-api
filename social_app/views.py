@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status, mixins, generics
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -56,7 +57,7 @@ class PostViewSet(viewsets.ModelViewSet):
     )
     def like(self, request, pk):
         own_profile = get_user_model().objects.get(pk=request.user.id)
-        post = Post.objects.get(pk=pk)
+        post = get_object_or_404(Post, pk=pk)
         if own_profile not in post.liked_by.all():
             post.liked_by.add(own_profile)
         return Response({"message": "You like this post"}, status=status.HTTP_200_OK)
@@ -92,22 +93,20 @@ class PostViewSet(viewsets.ModelViewSet):
             post = self.get_object()
             serializer = CommentSerializer(data=request.data)
             if serializer.is_valid():
-                user = request.user
                 content = serializer.data["content"]
-                Commentary.objects.create(user=user, post=post, content=content)
+                Commentary.objects.create(user=request.user, post=post, content=content)
                 return Response(
                     {"message": "Comment added"}, status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class MyPostView(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
-    def my_posts(self, request):
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="my_posts",
+        permission_classes=(IsAuthenticated,),
+    )
+    def my_posts(self, request, pk=None):
         posts_owner = request.user.id
         posts = Post.objects.filter(owner_id=posts_owner)
         if posts.exists():
@@ -115,7 +114,13 @@ class MyPostView(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"message": "No posts"}, status=status.HTTP_200_OK)
 
-    def followings_posts(self, request):
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="followings_posts",
+        permission_classes=(IsAuthenticated,),
+    )
+    def followings_posts(self, request, pk=None):
         """Retrieve posts of users to which the user is subscribed"""
         own_profile = get_user_model().objects.get(pk=request.user.id)
         followings = own_profile.following.all()
@@ -125,6 +130,12 @@ class MyPostView(viewsets.ModelViewSet):
                 return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"message": "No posts"}, status=status.HTTP_200_OK)
 
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="my_likes",
+        permission_classes=(IsAuthenticated,),
+    )
     def my_likes(self, request):
         """Posts tagged as like"""
         own_profile = get_user_model().objects.get(pk=request.user.id)
