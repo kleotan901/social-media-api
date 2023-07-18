@@ -21,8 +21,10 @@ class Post(models.Model):
     hashtag = models.CharField(max_length=100, blank=True, null=True)
     content = models.TextField(max_length=1500)
     created_at = models.DateTimeField(auto_now_add=True)
-    liked_by = models.ManyToManyField(settings.AUTH_USER_MODEL)
     image = models.ImageField(null=True, upload_to=post_img_file_path)
+    liked_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name="likes"
+    )
 
     def __str__(self):
         return f"{self.title} {self.owner}"
@@ -43,10 +45,3 @@ class Commentary(models.Model):
 
     def __str__(self):
         return f"{self.user} {self.content}"
-
-
-class Like(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="likes"
-    )
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")

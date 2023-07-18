@@ -7,6 +7,19 @@ class PostSerializer(serializers.ModelSerializer):
     owner = serializers.SlugRelatedField(
         slug_field="email", read_only=True
     )
+    liked_by = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="email"
+    )
+
     class Meta:
         model = Post
-        fields = ("id", "owner", "title", "hashtag", "content", "image", "created_at")
+        fields = (
+            "id",
+            "owner",
+            "title",
+            "hashtag",
+            "content",
+            "image",
+            "created_at",
+            "liked_by"
+        )

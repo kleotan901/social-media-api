@@ -9,9 +9,7 @@ from social_app.permissions import IsOwnerOrIfAuthenticatedReadOnly
 from social_app.serializers import PostSerializer
 
 
-class PostViewSet(
-    viewsets.ModelViewSet,
-):
+class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     authentication_classes = (JWTAuthentication,)
@@ -38,12 +36,26 @@ class PostViewSet(
 
         return queryset
 
+    def like(self, request, pk):
+        own_profile = get_user_model().objects.get(pk=request.user.id)
+        post = Post.objects.get(pk=pk)
+        if own_profile not in post.liked_by.all():
+            post.liked_by.add(own_profile)
+        return Response({"message": "You like this post"}, status=status.HTTP_200_OK)
+
+    def unlike(self, request, pk):
+        own_profile = get_user_model().objects.get(pk=request.user.id)
+        post = Post.objects.get(pk=pk)
+        if own_profile in post.liked_by.all():
+            post.liked_by.remove(own_profile)
+        return Response({"message": "Marked as dislike"}, status=status.HTTP_200_OK)
+
 
 class MyPostView(viewsets.ViewSet):
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
 
     def my_posts(self, request):
         posts_owner = request.user.id
@@ -54,7 +66,7 @@ class MyPostView(viewsets.ViewSet):
         return Response({"message": "No posts"}, status=status.HTTP_200_OK)
 
     def followings_posts(self, request):
-        """ Retrieve posts of users they are following """
+        """ Retrieve posts of users to which the user is subscribed """
         own_profile = get_user_model().objects.get(pk=request.user.id)
         followings = own_profile.following.all()
         for user in followings:
@@ -62,3 +74,12 @@ class MyPostView(viewsets.ViewSet):
                 serializer = self.serializer_class(user.posts, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"message": "No posts"}, status=status.HTTP_200_OK)
+
+    def my_likes(self, request):
+        """ Posts tagged as like """
+        own_profile = get_user_model().objects.get(pk=request.user.id)
+        like_post_list = own_profile.likes.all()
+        if like_post_list.exists():
+            serializer = self.serializer_class(like_post_list, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"message": "No posts tagged as like"}, status=status.HTTP_200_OK)
