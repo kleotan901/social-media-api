@@ -48,6 +48,12 @@ class PostViewSet(viewsets.ModelViewSet):
             return CommentSerializer
         return PostSerializer
 
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="like",
+        permission_classes=(IsAuthenticated,),
+    )
     def like(self, request, pk):
         own_profile = get_user_model().objects.get(pk=request.user.id)
         post = Post.objects.get(pk=pk)
@@ -55,6 +61,12 @@ class PostViewSet(viewsets.ModelViewSet):
             post.liked_by.add(own_profile)
         return Response({"message": "You like this post"}, status=status.HTTP_200_OK)
 
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="unlike",
+        permission_classes=(IsAuthenticated,),
+    )
     def unlike(self, request, pk):
         own_profile = get_user_model().objects.get(pk=request.user.id)
         post = Post.objects.get(pk=pk)
