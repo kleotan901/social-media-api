@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics, mixins, viewsets, status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
@@ -53,15 +54,38 @@ class UserViewSet(
         first_name = self.request.query_params.get("first_name")
         last_name = self.request.query_params.get("last_name")
         queryset = self.queryset
-
         if email:
             queryset = queryset.filter(email__icontains=email)
         if first_name:
             queryset = queryset.filter(first_name__icontains=first_name)
         if last_name:
             queryset = queryset.filter(last_name__icontains=last_name)
-
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="email",
+                description="Filter by email (ex. ?email=email)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="first_name",
+                description="Filter by first_name (ex. ?first_name=name)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="last_name",
+                description="Filter by last_name (ex. ?last_name=name)",
+                required=False,
+                type=str,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(self, request, *args, **kwargs)
 
 
 class LogoutView(APIView):

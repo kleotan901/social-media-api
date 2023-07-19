@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "django_celery_beat",
+    "drf_spectacular",
     "social_app",
     "user",
 ]
@@ -126,7 +127,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR/"media"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -136,9 +137,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
-
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Social Media API",
+    "DESCRIPTION": "API allows users create profiles, follow other users, "
+                   "create and view posts, manage likes and comments, "
+                   "and perform basic social media actions",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=600),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),

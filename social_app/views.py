@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status, generics, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -21,7 +22,7 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsOwnerOrIfAuthenticatedReadOnly,)
+    permission_classes = (IsOwnerOrIfAuthenticatedReadOnly, IsAuthenticated)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -164,6 +165,37 @@ class PostViewSet(viewsets.ModelViewSet):
             {"message": "No posts tagged as like"}, status=status.HTTP_200_OK
         )
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="hashtag",
+                description="Filter by hashtag (ex. ?hashtag=post)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="created_at",
+                description="Filter by created date (ex. ?created_at=2023-07-20)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="title",
+                description="Filter by title (ex. ?title=post)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="owner",
+                description="Filter by owner (ex. ?owner=email)",
+                required=False,
+                type=str,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(self, request, *args, **kwargs)
+
 
 class CommentViewSet(
     mixins.RetrieveModelMixin,
@@ -175,4 +207,4 @@ class CommentViewSet(
     queryset = Commentary.objects.all()
     serializer_class = CommentListSerializer
     authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsOwnerOrIfAuthenticatedReadOnly,)
+    permission_classes = (IsOwnerOrIfAuthenticatedReadOnly, IsAuthenticated)
