@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,6 +12,7 @@ from social_app.serializers import (
     PostSerializer,
     PostDetailSerializer,
     CommentSerializer,
+    CommentListSerializer,
 )
 from social_app.tasks import create_post
 
@@ -26,6 +27,7 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user)
 
     def create(self, request, *args, **kwargs):
+        """Schedule Post creation"""
         owner_id = self.request.user.id
         title = request.data.get("title")
         content = request.data.get("content")
@@ -37,7 +39,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
         return Response(
             {"message": f"run task {task_result.id} to create post at {created_at}"},
-            status=status.HTTP_202_ACCEPTED
+            status=status.HTTP_202_ACCEPTED,
         )
 
     def get_queryset(self):
@@ -161,3 +163,16 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response(
             {"message": "No posts tagged as like"}, status=status.HTTP_200_OK
         )
+
+
+class CommentViewSet(
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = Commentary.objects.all()
+    serializer_class = CommentListSerializer
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsOwnerOrIfAuthenticatedReadOnly,)
