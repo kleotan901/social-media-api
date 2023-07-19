@@ -20,7 +20,7 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     hashtag = models.CharField(max_length=100, blank=True, null=True)
     content = models.TextField(max_length=1500)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField()
     image = models.ImageField(null=True, upload_to=post_img_file_path)
     liked_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL, related_name="likes"

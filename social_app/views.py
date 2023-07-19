@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status, mixins, generics
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +13,7 @@ from social_app.serializers import (
     PostDetailSerializer,
     CommentSerializer,
 )
+from social_app.tasks import create_post
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -23,6 +24,21 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        owner_id = self.request.user.id
+        title = request.data.get("title")
+        content = request.data.get("content")
+        created_at = request.data.get("created_at")
+
+        task_result = create_post.apply_async(
+            args=[owner_id, title, content, created_at], eta=created_at
+        )
+
+        return Response(
+            {"message": f"run task {task_result.id} to create post at {created_at}"},
+            status=status.HTTP_202_ACCEPTED
+        )
 
     def get_queryset(self):
         """Retrieve the posts with filters by hashtag, created_at, title, owner"""
@@ -39,7 +55,6 @@ class PostViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(title__icontains=title)
         if owner:
             queryset = queryset.filter(owner__icontains=owner)
-
         return queryset
 
     def get_serializer_class(self):
@@ -121,7 +136,7 @@ class PostViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,),
     )
     def followings_posts(self, request, pk=None):
-        """Retrieve posts of users to which the user is subscribed"""
+        """Retrieve posts of users to which the current user is subscribed"""
         own_profile = get_user_model().objects.get(pk=request.user.id)
         followings = own_profile.following.all()
         for user in followings:
