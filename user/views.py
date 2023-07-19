@@ -9,6 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from user.models import User
+from user.permissions import IsUserOrIfAuthenticatedReadOnly
 from user.serializers import UserSerializer, UserListSerializer
 
 
@@ -32,12 +33,14 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
 class UserViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     serializer_class = UserSerializer
     queryset = User.objects.all()
     authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsUserOrIfAuthenticatedReadOnly, IsAuthenticated)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -73,9 +76,9 @@ class LogoutView(APIView):
 
 
 class UserFollowView(viewsets.ViewSet):
+    queryset = get_user_model().objects.all()
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
-    queryset = get_user_model().objects.all()
 
     def follow(self, request, pk):
         own_profile = get_user_model().objects.get(pk=request.user.id)
