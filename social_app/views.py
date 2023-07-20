@@ -1,10 +1,13 @@
+from typing import List, Type
+
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import viewsets, status, generics, mixins
+from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer, BaseSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from social_app.models import Post, Commentary
@@ -24,32 +27,28 @@ class PostViewSet(viewsets.ModelViewSet):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsOwnerOrIfAuthenticatedReadOnly, IsAuthenticated)
 
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+    def perform_create(self, serializer: Serializer) -> None:
+        owner = self.request.user
+        title = serializer.validated_data["title"]
+        content = serializer.validated_data["content"]
+        created_at = serializer.validated_data.get("created_at", None)
 
-    def create(self, request, *args, **kwargs):
-        """Schedule Post creation"""
-        owner_id = self.request.user.id
-        title = request.data.get("title")
-        content = request.data.get("content")
-        created_at = request.data.get("created_at")
+        if created_at:
+            create_post.apply_async(
+                args=(owner.id, title, content, created_at), eta=created_at
+            )
 
-        task_result = create_post.apply_async(
-            args=[owner_id, title, content, created_at], eta=created_at
-        )
+        else:
+            serializer.save(owner=owner)
 
-        return Response(
-            {"message": f"run task {task_result.id} to create post at {created_at}"},
-            status=status.HTTP_202_ACCEPTED,
-        )
-
-    def get_queryset(self):
+    def get_queryset(self) -> List[Post]:
         """Retrieve the posts with filters by hashtag, created_at, title, owner"""
         hashtag = self.request.query_params.get("hashtag")
         created_at = self.request.query_params.get("created_at")
         title = self.request.query_params.get("title")
         owner = self.request.query_params.get("owner")
         queryset = self.queryset
+
         if hashtag:
             queryset = queryset.filter(hashtag__icontains=hashtag)
         if created_at:
@@ -58,22 +57,25 @@ class PostViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(title__icontains=title)
         if owner:
             queryset = queryset.filter(owner__icontains=owner)
+
         return queryset
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[BaseSerializer]:
         if self.action == "retrieve":
             return PostDetailSerializer
+
         if self.action == "comment":
             return CommentSerializer
+
         return PostSerializer
 
     @action(
-        methods=["POST"],
+        methods=["PUT"],
         detail=True,
         url_path="like",
         permission_classes=(IsAuthenticated,),
     )
-    def like(self, request, pk):
+    def like(self, request, pk) -> Response:
         own_profile = get_user_model().objects.get(pk=request.user.id)
         post = get_object_or_404(Post, pk=pk)
         if own_profile not in post.liked_by.all():
@@ -81,12 +83,12 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response({"message": "You like this post"}, status=status.HTTP_200_OK)
 
     @action(
-        methods=["POST"],
+        methods=["PUT"],
         detail=True,
         url_path="unlike",
         permission_classes=(IsAuthenticated,),
     )
-    def unlike(self, request, pk):
+    def unlike(self, request, pk) -> Response:
         own_profile = get_user_model().objects.get(pk=request.user.id)
         post = Post.objects.get(pk=pk)
         if own_profile in post.liked_by.all():
@@ -100,7 +102,7 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer_class=CommentSerializer,
         permission_classes=(IsAuthenticated,),
     )
-    def comment(self, request, pk=None):
+    def comment(self, request, pk=None) -> Response:
         if self.request.method == "GET":
             post = self.get_object()
             comments = post.commentaries.all()
@@ -124,7 +126,7 @@ class PostViewSet(viewsets.ModelViewSet):
         url_path="my_posts",
         permission_classes=(IsAuthenticated,),
     )
-    def my_posts(self, request, pk=None):
+    def my_posts(self, request, pk=None) -> Response:
         posts_owner = request.user.id
         posts = Post.objects.filter(owner_id=posts_owner)
         if posts.exists():
@@ -138,7 +140,7 @@ class PostViewSet(viewsets.ModelViewSet):
         url_path="followings_posts",
         permission_classes=(IsAuthenticated,),
     )
-    def followings_posts(self, request, pk=None):
+    def followings_posts(self, request, pk=None) -> Response:
         """Retrieve posts of users to which the current user is subscribed"""
         own_profile = get_user_model().objects.get(pk=request.user.id)
         followings = own_profile.following.all()
@@ -154,7 +156,7 @@ class PostViewSet(viewsets.ModelViewSet):
         url_path="my_likes",
         permission_classes=(IsAuthenticated,),
     )
-    def my_likes(self, request):
+    def my_likes(self, request) -> Response:
         """Posts tagged as like"""
         own_profile = get_user_model().objects.get(pk=request.user.id)
         like_post_list = own_profile.likes.all()
@@ -187,7 +189,7 @@ class PostViewSet(viewsets.ModelViewSet):
             ),
             OpenApiParameter(
                 name="owner",
-                description="Filter by owner (ex. ?owner=email)",
+                description="Filter by owner (ex. ?email=email)",
                 required=False,
                 type=str,
             ),
@@ -208,3 +210,9 @@ class CommentViewSet(
     serializer_class = CommentListSerializer
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsOwnerOrIfAuthenticatedReadOnly, IsAuthenticated)
+
+    def get_serializer_class(self) -> Type[BaseSerializer]:
+        if self.action == "retrieve":
+            return CommentSerializer
+
+        return CommentListSerializer
