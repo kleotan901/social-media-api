@@ -11,6 +11,7 @@ from social_app.serializers import (
 )
 
 POST_URL = reverse("social_app:post-list")
+FOLLOWING_POSTS_URL = f"{POST_URL}followings_posts/"
 
 
 def detail_url(post_id):
@@ -228,7 +229,7 @@ class AuthorizedUserPostViewSetTest(TestCase):
         following_user = get_user_model().objects.get(pk=2)
         user.following.add(following_user)
         posts_of_followings = Post.objects.filter(owner=following_user.id)
-        result = self.client.get(f"{POST_URL}followings_posts/")
+        result = self.client.get(FOLLOWING_POSTS_URL)
 
         serializer = PostSerializer(posts_of_followings, many=True)
 
