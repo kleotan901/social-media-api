@@ -27,6 +27,10 @@ urlpatterns = [
     path("token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     path("me/", ManageUserView.as_view(), name="manage"),
     path("logout/", LogoutView.as_view(), name="logout"),
-    path("follow/<int:pk>/", UserFollowView.as_view({"post": "follow"})),
-    path("unfollow/<int:pk>/", UserFollowView.as_view({"post": "unfollow"})),
+    path("follow/<int:pk>/", UserFollowView.as_view({"post": "follow"}), name="follow"),
+    path(
+        "unfollow/<int:pk>/",
+        UserFollowView.as_view({"post": "unfollow"}),
+        name="unfollow",
+    ),
 ]
