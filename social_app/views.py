@@ -29,8 +29,8 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer: Serializer) -> None:
         owner = self.request.user
-        title = serializer.validated_data["title"]
-        content = serializer.validated_data["content"]
+        title = serializer.validated_data.get("title")
+        content = serializer.validated_data.get("content")
         created_at = serializer.validated_data.get("created_at", None)
 
         if created_at:
@@ -112,13 +112,12 @@ class PostViewSet(viewsets.ModelViewSet):
         if self.request.method == "POST":
             post = self.get_object()
             serializer = CommentSerializer(data=request.data)
-            if serializer.is_valid():
-                content = serializer.data["content"]
-                Commentary.objects.create(user=request.user, post=post, content=content)
-                return Response(
-                    {"message": "Comment added"}, status=status.HTTP_201_CREATED
-                )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            content = serializer.data.get("content")
+            Commentary.objects.create(user=request.user, post=post, content=content)
+            return Response(
+                {"message": "Comment added"}, status=status.HTTP_201_CREATED
+            )
 
     @action(
         methods=["GET"],
