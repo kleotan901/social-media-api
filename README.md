@@ -1,5 +1,6 @@
 # social-media-api
 
+API allows users create profiles, follow other users, create and view posts, manage likes and comments, and perform basic social media actions. Also users have possibility to schedule post creation. 
 
 [https://github.com/kleotan901/social-media-api.git](https://github.com/kleotan901/social-media-api.git)
 
@@ -11,12 +12,7 @@ cd social-media-api
 python -m venv venv
 venv\Scripts\activate (on Windows)
 source venv/bin/activate (on macOS)
-pip install -r requirements.txt
-python manage.py migrate
-docker run -d -p 6379:6379 redis # run Redis Server
-celery -A social_media_api beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-celery -A social_media_api worker -l INFO # run celery worker for task handling
-python manage.py runserver # run app
+docker-compose up --build
 ```
 
 ## Configuration
