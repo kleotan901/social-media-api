@@ -11,6 +11,9 @@ git clone https://github.com/kleotan901/social-media-api.git
 cd social-media-api
 docker-compose up --build
 ```
+#### Test user:
+ - Email: user@email.com
+ - Password: qay12345
 
 ## Configuration
 
