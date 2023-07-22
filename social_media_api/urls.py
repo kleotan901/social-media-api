@@ -24,10 +24,10 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/user/", include("user.urls", namespace="user")),
     path("api/social/", include("social_app.urls", namespace="social")),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/doc/", SpectacularAPIView.as_view(), name="schema"),
     path(
-        "api/schema/swagger/",
+        "api/doc/swagger/",
         SpectacularSwaggerView.as_view(url_name="schema"),
-        name="swagger-ui",
+        name="swagger",
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
