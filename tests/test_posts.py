@@ -1,3 +1,6 @@
+import tempfile
+from celery.contrib.testing.worker import start_worker
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -19,20 +22,18 @@ def detail_url(post_id):
 
 
 class UnauthorizedUserPostViewSetTest(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
         user = get_user_model().objects.create_user(
             email="user@email.com", password="password"
         )
         Post.objects.create(
+            pk=1,
             owner=user,
             title="Sample post 1",
             hashtag="test hashtag 1",
             content="Sample content",
             created_at="2023-05-10",
         )
-
-    def setUp(self):
         self.client = APIClient()
 
     def test_post_list(self):
@@ -47,15 +48,15 @@ class UnauthorizedUserPostViewSetTest(TestCase):
 
 
 class AuthorizedUserPostViewSetTest(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
         user = get_user_model().objects.create_user(
-            email="user@email.com", password="password"
+            pk=1, email="user@email.com", password="password"
         )
         user_2 = get_user_model().objects.create_user(
-            email="user_2@email.com", password="password"
+            pk=2, email="user_2@email.com", password="password"
         )
         Post.objects.create(
+            pk=1,
             owner=user,
             title="Sample post 1",
             hashtag="test hashtag 1",
@@ -63,6 +64,7 @@ class AuthorizedUserPostViewSetTest(TestCase):
             created_at="2023-05-10",
         )
         Post.objects.create(
+            pk=2,
             owner=user,
             title="Test post 2",
             hashtag="test hashtag 2",
@@ -70,16 +72,14 @@ class AuthorizedUserPostViewSetTest(TestCase):
             created_at="2023-01-11",
         )
         Post.objects.create(
+            pk=3,
             owner=user_2,
             title="Post 3",
             hashtag="test hashtag 3",
             content="Some content",
             created_at="2023-07-13",
         )
-
-    def setUp(self):
         self.client = APIClient()
-        user = get_user_model().objects.get(pk=1)
         self.client.force_authenticate(user)
 
     def test_post_list(self):
@@ -95,13 +95,35 @@ class AuthorizedUserPostViewSetTest(TestCase):
         user = get_user_model().objects.get(pk=1)
         payload = {
             "owner": user,
-            "title": "Sample post",
+            "title": "Sample post TEST",
             "content": "Sample content",
             "created_at": "2023-05-10",
         }
         result = self.client.post(POST_URL, payload)
 
         self.assertEqual(result.status_code, status.HTTP_201_CREATED)
+
+    def test_image_url_is_shown_on_post_detail(self):
+        post = Post.objects.get(id=1)
+        url = detail_url(post.id)
+        with tempfile.NamedTemporaryFile(suffix=".jpg") as ntf:
+            img = Image.new("RGB", (10, 10))
+            img.save(ntf, format="JPEG")
+            ntf.seek(0)
+            self.client.post(url, {"image": ntf}, format="multipart")
+        result = self.client.get(url)
+
+        self.assertIn("image", result.data)
+
+    def test_image_url_is_shown_on_post_list(self):
+        with tempfile.NamedTemporaryFile(suffix=".jpg") as ntf:
+            img = Image.new("RGB", (10, 10))
+            img.save(ntf, format="JPEG")
+            ntf.seek(0)
+            self.client.post(POST_URL, {"image": ntf}, format="multipart")
+        result = self.client.get(POST_URL)
+
+        self.assertIn("image", result.data[0].keys())
 
     def test_posts_filtered_by_hashtag(self):
         test_post_1 = Post.objects.get(id=1)
@@ -158,7 +180,7 @@ class AuthorizedUserPostViewSetTest(TestCase):
 
     def test_update_post_if_owner(self):
         user = get_user_model().objects.get(pk=1)
-        post = Post.objects.get(id=1)
+        post = Post.objects.get(pk=1)
         url = detail_url(post.id)
         payload = {
             "owner": user,
@@ -167,14 +189,16 @@ class AuthorizedUserPostViewSetTest(TestCase):
             "created_at": "2023-12-12",
         }
         result = self.client.put(url, payload)
+        serializer = PostDetailSerializer(post, payload)
 
+        self.assertTrue(serializer.is_valid())
         self.assertEqual(result.status_code, status.HTTP_200_OK)
         self.assertNotEqual(result.data["title"], post.title)
         self.assertEqual(result.data["content"], post.content)
         self.assertNotEqual(result.data["created_at"], post.created_at)
 
     def test_update_post_if_not_owner(self):
-        post = Post.objects.get(id=3)
+        post = Post.objects.get(pk=3)
         url = detail_url(post.id)
         result = self.client.put(url)
 

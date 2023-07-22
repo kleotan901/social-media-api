@@ -1,3 +1,6 @@
+import tempfile
+
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -39,9 +42,10 @@ class AuthorizedUserUserViewSetTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         get_user_model().objects.create_user(
-            email="user@email.com", password="password"
+            pk=1, email="test@email.com", password="password"
         )
         get_user_model().objects.create_user(
+            pk=2,
             email="user_2@email.com",
             password="password",
             first_name="John",
@@ -71,6 +75,45 @@ class AuthorizedUserUserViewSetTest(TestCase):
 
         self.assertEqual(result.status_code, status.HTTP_200_OK)
         self.assertEqual(result.data, serializer.data)
+
+    def test_update_my_profile(self):
+        user = get_user_model().objects.get(pk=1)
+        url = detail_url(user.id)
+        payload = {
+            "email": "test@email.com",
+            "password": "new password",
+            "first_name": "John",
+            "last_name": "Smith",
+        }
+
+        result = self.client.put(url, payload)
+        serializer = UserSerializer(user, data=payload)
+
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
+        self.assertEqual(result.data["email"], serializer.data["email"])
+        self.assertNotEqual(result.data["first_name"], serializer.data["first_name"])
+        self.assertNotEqual(result.data["last_name"], serializer.data["last_name"])
+
+    def test_image_url_is_shown_on_user_detail(self):
+        with tempfile.NamedTemporaryFile(suffix=".jpg") as ntf:
+            img = Image.new("RGB", (10, 10))
+            img.save(ntf, format="JPEG")
+            ntf.seek(0)
+            self.client.post(MY_PROFILE_URL, {"picture": ntf}, format="multipart")
+        result = self.client.get(MY_PROFILE_URL)
+
+        self.assertIn("picture", result.data)
+
+    def test_image_url_is_shown_on_user_list(self):
+        with tempfile.NamedTemporaryFile(suffix=".jpg") as ntf:
+            img = Image.new("RGB", (10, 10))
+            img.save(ntf, format="JPEG")
+            ntf.seek(0)
+            self.client.post(USER_PROFILES_URL, {"picture": ntf}, format="multipart")
+        res = self.client.get(USER_PROFILES_URL)
+
+        self.assertIn("picture", res.data[0].keys())
 
     def test_retrieve_my_profile(self):
         user_profile_1 = get_user_model().objects.get(pk=1)
