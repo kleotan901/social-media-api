@@ -9,9 +9,6 @@ API allows users create profiles, follow other users, create and view posts, man
 ```shell
 git clone https://github.com/kleotan901/social-media-api.git
 cd social-media-api
-python -m venv venv
-venv\Scripts\activate (on Windows)
-source venv/bin/activate (on macOS)
 docker-compose up --build
 ```
 
