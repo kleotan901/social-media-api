@@ -22,9 +22,7 @@ class Post(models.Model):
     content = models.TextField(max_length=1500)
     created_at = models.DateTimeField()
     image = models.ImageField(null=True, upload_to=post_img_file_path)
-    liked_by = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, related_name="likes"
-    )
+    liked_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="likes")
 
     def __str__(self):
         return f"{self.title} {self.owner}"
