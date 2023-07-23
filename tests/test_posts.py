@@ -1,5 +1,8 @@
+import datetime
 import tempfile
-from celery.contrib.testing.worker import start_worker
+from unittest.mock import patch
+
+import pytz
 from PIL import Image
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -91,15 +94,32 @@ class AuthorizedUserPostViewSetTest(TestCase):
         self.assertEqual(result.data, serializer.data)
         self.assertEqual(posts.count(), 3)
 
-    def test_create_post(self):
+    @patch("social_app.views.create_post.apply_async")
+    def test_task_create_post(self, mock_apply_async):
         user = get_user_model().objects.get(pk=1)
+
         payload = {
-            "owner": user,
-            "title": "Sample post TEST",
-            "content": "Sample content",
-            "created_at": "2023-05-10",
+            "owner": user.id,
+            "title": "Test Post",
+            "hashtag": "hash",
+            "content": "The test post",
+            "created_at": "2023-07-20",
         }
         result = self.client.post(POST_URL, payload)
+
+        created_at_datetime = datetime.datetime.fromisoformat(payload["created_at"])
+        utc_timezone = pytz.timezone("UTC")
+        created_at_datetime = created_at_datetime.replace(tzinfo=utc_timezone)
+
+        mock_apply_async.assert_called_once_with(
+            args=(
+                user.id,
+                "Test Post",
+                "The test post",
+                created_at_datetime,
+            ),
+            eta=created_at_datetime,
+        )
 
         self.assertEqual(result.status_code, status.HTTP_201_CREATED)
 
